@@ -8,6 +8,9 @@ STREAM_DIR="${LOCAL_BASE}/stream/${RUN_DATE}"
 CLEAN_DIR="${LOCAL_BASE}/cleaned/${RUN_DATE}"
 RESULT_DIR="${LOCAL_BASE}/results/${RUN_DATE}"
 FRONTEND_DIR="${LOCAL_BASE}/frontend"
+PUBLISH_FRONTEND_HOST="${PUBLISH_FRONTEND_HOST:-47.103.220.68}"
+PUBLISH_FRONTEND_API_DIR="${PUBLISH_FRONTEND_API_DIR:-/opt/honeypot-cybermap-frontend/dist/api}"
+PUBLISH_FRONTEND_TIMEOUT="${PUBLISH_FRONTEND_TIMEOUT:-20}"
 
 export JAVA_HOME="${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")}"
 export HADOOP_HOME="${HADOOP_HOME:-/opt/hadoop}"
@@ -55,6 +58,67 @@ sync_growing_jsonl() {
   tail -c +"$((remote_size + 1))" "${src}" | hdfs dfs -appendToFile - "${dst}" || put_hdfs_atomic "${src}" "${dst}"
 }
 
+publish_frontend_snapshot() {
+  [ -n "${PUBLISH_FRONTEND_HOST}" ] || return 0
+  [ -s "${FRONTEND_DIR}/dashboard-flink.json" ] || return 0
+
+  local remote_tmp="${PUBLISH_FRONTEND_API_DIR}/dashboard-flink.json.tmp"
+  local ssh_opts=(
+    -o BatchMode=yes
+    -o ConnectTimeout=5
+    -o ControlMaster=auto
+    -o ControlPersist=60
+    -o ControlPath=/tmp/honeypot-hdfs-sync-%r@%h:%p
+  )
+
+  timeout "${PUBLISH_FRONTEND_TIMEOUT}" \
+    ssh "${ssh_opts[@]}" "root@${PUBLISH_FRONTEND_HOST}" "mkdir -p '${PUBLISH_FRONTEND_API_DIR}'"
+  timeout "${PUBLISH_FRONTEND_TIMEOUT}" \
+    scp -q "${ssh_opts[@]}" "${FRONTEND_DIR}/dashboard-flink.json" "root@${PUBLISH_FRONTEND_HOST}:${remote_tmp}"
+  timeout "${PUBLISH_FRONTEND_TIMEOUT}" \
+    ssh "${ssh_opts[@]}" "root@${PUBLISH_FRONTEND_HOST}" "API_DIR='${PUBLISH_FRONTEND_API_DIR}' python3 - <<'PY'
+import json
+import os
+import shutil
+
+api_dir = os.environ['API_DIR']
+base_path = os.path.join(api_dir, 'dashboard.json')
+flink_tmp_path = os.path.join(api_dir, 'dashboard-flink.json.tmp')
+flink_path = os.path.join(api_dir, 'dashboard-flink.json')
+out_path = os.path.join(api_dir, 'dashboard.json.tmp')
+backup_path = os.path.join(api_dir, 'dashboard.json.bak-before-hdfs-sync-merge')
+
+with open(flink_tmp_path, encoding='utf-8') as handle:
+    flink = json.load(handle)
+
+base = {}
+if os.path.exists(base_path):
+    with open(base_path, encoding='utf-8') as handle:
+        base = json.load(handle)
+    if not os.path.exists(backup_path):
+        shutil.copy2(base_path, backup_path)
+
+merged = dict(base) if isinstance(base, dict) and base else dict(flink)
+for key in ('events', 'sources', 'honeypots', 'ingestStatus'):
+    value = flink.get(key)
+    if isinstance(value, list) and value:
+        merged[key] = value
+for key in ('generatedAt', 'generatedAtLocal'):
+    if flink.get(key):
+        merged[key] = flink[key]
+for key in ('stats', 'attackMethods', 'protocols', 'historyTrend', 'historyStats'):
+    if not merged.get(key) and flink.get(key):
+        merged[key] = flink[key]
+
+with open(out_path, 'w', encoding='utf-8') as handle:
+    json.dump(merged, handle, ensure_ascii=False, separators=(',', ':'))
+os.replace(flink_tmp_path, flink_path)
+os.replace(out_path, base_path)
+os.chmod(flink_path, 0o644)
+os.chmod(base_path, 0o644)
+PY"
+}
+
 hdfs dfs -mkdir -p "/honeypot/ods/stream/${RUN_DATE}"
 hdfs dfs -rm -f "/honeypot/ods/stream/${RUN_DATE}/"*.tmp.* >/dev/null 2>&1 || true
 for file in "${STREAM_DIR}"/*.jsonl; do
@@ -76,5 +140,7 @@ put_hdfs_atomic "${RESULT_DIR}/preprocess_summary.json" "/honeypot/dwd/cleaned_e
 if id hadoop >/dev/null 2>&1; then
   chown -R hadoop:hadoop "${CLEAN_DIR}" "${RESULT_DIR}" "${FRONTEND_DIR}" || true
 fi
+
+publish_frontend_snapshot || echo "frontend dashboard publish failed"
 
 echo "Flink stream synced to HDFS for ${RUN_DATE}"
