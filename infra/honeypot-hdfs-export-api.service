@@ -1,0 +1,22 @@
+[Unit]
+Description=Read-only HDFS export API for honeypot events
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hadoop
+Group=hadoop
+Environment=JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+Environment=HADOOP_HOME=/opt/hadoop
+Environment=HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+ExecStart=/usr/bin/python3 /opt/honeypot-hdfs-export-api/honeypot_hdfs_export_api.py --host 0.0.0.0 --port 9101 --hdfs-root /honeypot/dwd/cleaned_events --token-file /etc/honeypot-hdfs-export-api/token --allowed-client 203.0.113.40,127.0.0.1,::1
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

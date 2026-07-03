@@ -1,0 +1,10 @@
+[Unit]
+Description=Honeypot HDFS and MapReduce aggregation pipeline
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=hadoop
+Group=hadoop
+ExecStart=/bin/bash -lc 'source /etc/profile.d/hadoop.sh; /opt/honeypot-bigdata/run_honeypot_bigdata_pipeline.sh'

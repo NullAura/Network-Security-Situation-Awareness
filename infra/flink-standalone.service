@@ -1,0 +1,15 @@
+[Unit]
+Description=Apache Flink standalone cluster
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+Environment=FLINK_HOME=/opt/flink
+ExecStart=/opt/flink/bin/start-cluster.sh
+ExecStop=/opt/flink/bin/stop-cluster.sh
+
+[Install]
+WantedBy=multi-user.target

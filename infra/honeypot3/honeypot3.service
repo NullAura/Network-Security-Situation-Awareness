@@ -1,0 +1,15 @@
+[Unit]
+Description=BigData Honeypot 3 multi-protocol low-interaction sensor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/honeypot3/honeypot3.py --user honeypot3
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

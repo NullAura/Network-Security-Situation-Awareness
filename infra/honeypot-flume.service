@@ -1,0 +1,19 @@
+[Unit]
+Description=Honeypot Flume log collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Environment=JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+Environment=FLUME_HOME=/opt/flume
+Environment="FLUME_JAVA_OPTS=-Xms64m -Xmx128m"
+ExecStart=/opt/flume/bin/flume-ng agent --conf /opt/flume/conf --conf-file /etc/flume/honeypot-flume.conf --name agent -Dflume.root.logger=INFO,console
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

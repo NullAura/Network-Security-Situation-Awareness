@@ -1,0 +1,16 @@
+[Unit]
+Description=Honeypot realtime frontend dashboard publisher
+After=network-online.target honeypot-flink-stream.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/python3 /opt/honeypot-bigdata/honeypot_realtime_dashboard.py --input /data/honeypot/stream/{date} --history-input /data/honeypot/stream --interval 60 --preprocess-timeout 180
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

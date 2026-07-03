@@ -1,0 +1,17 @@
+[Unit]
+Description=Honeypot seconds-level log shipper
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile=/etc/honeypot-log-shipper.env
+ExecStart=/usr/bin/python3 /opt/honeypot-log-shipper/shipper.py --source ${SOURCE_ID} --path ${LOG_PATH} --endpoint ${ENDPOINT} --state-file ${STATE_FILE} --batch-lines 100 --flush-seconds 1 --start end
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

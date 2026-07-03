@@ -1,0 +1,16 @@
+[Unit]
+Description=Honeypot HTTP log ingest API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/python3 /opt/honeypot-log-collector/ingest_server.py --host 0.0.0.0 --port 9000 --data-dir /data/honeypot/stream --allowed-ip 203.0.113.10 --allowed-ip 203.0.113.11 --allowed-ip 203.0.113.12 --allowed-ip 127.0.0.1 --allowed-ip ::1
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

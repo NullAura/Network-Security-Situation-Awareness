@@ -1,0 +1,16 @@
+[Unit]
+Description=Honeypot Kafka raw log consumer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/honeypot-kafka-consumer
+ExecStart=/opt/honeypot-kafka-consumer/venv/bin/python /opt/honeypot-kafka-consumer/honeypot_kafka_stream_consumer.py --bootstrap-server 203.0.113.20:9092 --data-dir /data/honeypot/stream --group-id honeypot-clean-stream-writer --auto-offset-reset earliest
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

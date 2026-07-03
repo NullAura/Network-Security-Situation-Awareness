@@ -1,0 +1,17 @@
+[Unit]
+Description=Honeypot second-level live dashboard publisher
+After=network-online.target honeypot-kafka-consumer.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/honeypot-bigdata
+ExecStart=/usr/bin/python3 /opt/honeypot-bigdata/honeypot_live_dashboard.py --input /data/honeypot/stream/{date} --interval 1 --warmup-lines 160 --limit-events 160 --retention-events 2000 --window-seconds 60
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

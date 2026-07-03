@@ -1,0 +1,12 @@
+[Unit]
+Description=Sync Flink honeypot stream output to HDFS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+Environment=JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+Environment=HADOOP_USER_NAME=hadoop
+ExecStart=/bin/bash -lc '/opt/honeypot-bigdata/honeypot_flink_hdfs_sync.sh'

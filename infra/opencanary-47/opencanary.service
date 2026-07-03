@@ -1,0 +1,17 @@
+[Unit]
+Description=OpenCanary multi-protocol honeypot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=opencanary
+Group=opencanary
+WorkingDirectory=/opt/opencanary
+Environment=TZ=Asia/Shanghai
+ExecStart=/opt/opencanary/venv/bin/twistd -noy /opt/opencanary/venv/bin/opencanary.tac --pidfile=
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
